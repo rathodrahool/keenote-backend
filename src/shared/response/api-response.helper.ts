@@ -9,6 +9,10 @@ export class ApiResponseHelper {
     data: T | [],
     message: string = 'Success',
   ): IApiResponse<T> {
+    // If data is already an API response, return it as is
+    if (data && typeof data === 'object' && 'status' in data && 'message' in data && 'data' in data) {
+      return data as IApiResponse<T>;
+    }
     return {
       status: 1,
       message,
@@ -20,6 +24,10 @@ export class ApiResponseHelper {
     data: T,
     message: string = 'Created successfully',
   ): IApiResponse<T> {
+    // If data is already an API response, return it as is
+    if (data && typeof data === 'object' && 'status' in data && 'message' in data && 'data' in data) {
+      return data as IApiResponse<T>;
+    }
     return {
       status: 1,
       message,
@@ -53,10 +61,18 @@ export class ApiResponseHelper {
       hasNextPage: page < totalPages,
     };
 
+    // If data array contains API responses, extract their data
+    const cleanData = data.map(item => {
+      if (item && typeof item === 'object' && 'status' in item && 'message' in item && 'data' in item) {
+        return (item as unknown as IApiResponse<T>).data;
+      }
+      return item;
+    }) as T[];
+
     return {
       status: 1,
       message,
-      data,
+      data: cleanData,
       meta,
     };
   }
