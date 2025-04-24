@@ -1,5 +1,6 @@
-import { IsNotEmpty, IsNumber, IsOptional } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, Matches } from 'class-validator';
 import { Schema as MongooseSchema } from 'mongoose';
+import { SessionStatus, TaskType } from 'src/shared/constants/enum';
 
 export class CreateTimeSessionDto {
   @IsNotEmpty()
@@ -8,6 +9,12 @@ export class CreateTimeSessionDto {
   @IsNumber()
   @IsOptional()
   started_at?: number;
+
+  @IsString()
+  @Matches(/^\d{2}-\d{2}-\d{4}$/, {
+    message: 'date must be in format dd-MM-yyyy',
+  })
+  date: string;
 
   @IsNumber()
   @IsOptional()
@@ -20,4 +27,12 @@ export class CreateTimeSessionDto {
   @IsNumber()
   @IsOptional()
   completed_target?: number;
+
+  @IsEnum(TaskType)
+  @IsOptional()
+  session_type?:TaskType
+
+  @IsEnum(SessionStatus)
+  @IsOptional()
+  status?:SessionStatus
 }
