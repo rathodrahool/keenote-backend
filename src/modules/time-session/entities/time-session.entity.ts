@@ -31,14 +31,23 @@ export class TimeSession {
   @Prop({ type: Number, required: false })
   completed_target: number;
 
-  @Prop({type:String, enum : TaskType , required:false })
-  session_type: TaskType
+  @Prop({ type: String, enum: TaskType, required: false })
+  session_type: TaskType;
 
-  @Prop({type:String, enum : SessionStatus , required:false })
-  status: SessionStatus
+  @Prop({ type: String, enum: SessionStatus, required: false })
+  status: SessionStatus;
+
+  @Prop({ type: Boolean, default: false })
+  is_period_completed: boolean;
+
+  @Prop({ type: String, required: false })
+  period_id: string;
+
+  @Prop({ type: Number, required: false })
+  remaining_duration: number;
 }
 
 export const TimeSessionSchema = SchemaFactory.createForClass(TimeSession);
 TimeSessionSchema.plugin(SoftDeleteDefaultFieldsPlugin);
 
-export type TimeSessionDocument = TimeSession & Document & ISoftDelete;
+export type TimeSessionDocument = TimeSession & Document & ISoftDelete; 
