@@ -12,6 +12,7 @@ import { TimeSessionService } from './time-session.service';
 import { CreateTimeSessionDto } from './dto/create-time-session.dto';
 import { UpdateTimeSessionDto } from './dto/update-time-session.dto';
 import { IFindAllQuery } from 'src/shared/types/response.type';
+import { AddTimeBasedSessionDto } from './dto/add-time-based-session.dto';
 
 @Controller('time-session')
 export class TimeSessionController {
@@ -20,6 +21,11 @@ export class TimeSessionController {
   @Post()
   create(@Body() createTimeSessionDto: CreateTimeSessionDto) {
     return this.timeSessionService.create(createTimeSessionDto);
+  }
+
+  @Post('time-based')
+  addTimeBasedSession(@Body() addTimeBasedSessionDto:AddTimeBasedSessionDto) {
+    return this.timeSessionService.addTimeBasedSession(addTimeBasedSessionDto);
   }
 
   @Get()

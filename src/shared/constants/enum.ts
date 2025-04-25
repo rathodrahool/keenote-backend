@@ -1,9 +1,3 @@
-export enum EmailTemplateStatus {
-  DRAFT = 'DRAFT',
-  PUBLISHED = 'PUBLISHED',
-  ARCHIVED = 'ARCHIVED',
-}
-
 export enum Status {
   ACTIVE = 'ACTIVE',
   INACTIVE = 'INACTIVE',

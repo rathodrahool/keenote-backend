@@ -8,6 +8,8 @@ import { ApiResponseHelper } from 'src/shared/response/api-response.helper';
 import { ERROR, SUCCESS } from 'src/shared/constants/constant';
 import { IApiResponse, IFindAllQuery, IPaginatedResponse } from 'src/shared/types/response.type';
 import { paginate } from 'src/util/paginate';
+import { AddTimeBasedSessionDto } from './dto/add-time-based-session.dto';
+import { TaskType } from 'src/shared/constants/enum';
 
 @Injectable()
 export class TimeSessionService {
@@ -22,6 +24,30 @@ export class TimeSessionService {
     return ApiResponseHelper.created(result, SUCCESS.RECORD_ADDED('time session'));
   }
 
+  async addTimeBasedSession(addTimeBasedSessionDto:AddTimeBasedSessionDto) : Promise<IApiResponse<[]>>{
+    const {task, date,ended_at ,status} = addTimeBasedSessionDto;
+    const timeSession = await this.timeSessionModel.findOne({
+      task : task,
+      date: date
+    })
+    if(!timeSession){
+      const newTimeSession = new this.timeSessionModel(addTimeBasedSessionDto);
+     await newTimeSession.save()
+     return ApiResponseHelper.created([], SUCCESS.RECORD_ADDED('time session'));
+    }
+
+    await this.timeSessionModel.updateOne({
+      _id : timeSession.id
+    },
+    {
+      session_type : TaskType.TIME_BASED,
+      ended_at : ended_at,
+      duration_minutes : Math.floor((ended_at - timeSession.started_at) / 60000),
+      status : status
+
+    })
+
+  }
   async findAll(query: IFindAllQuery): Promise<IPaginatedResponse<TimeSession[]>> {
     const timeSessions = await paginate<TimeSession>(this.timeSessionModel, query, [
       'task',
