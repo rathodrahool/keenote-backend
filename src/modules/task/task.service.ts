@@ -12,7 +12,8 @@ import {
   IPaginatedResponse,
 } from 'src/shared/types/response.type';
 import { paginate } from 'src/util/paginate';
-import { TaskType } from 'src/shared/constants/enum';
+import { TaskType, TaskFrequency } from 'src/shared/constants/enum';
+import { addDays, addWeeks, addMonths, format } from 'date-fns';
 
 @Injectable()
 export class TaskService {
@@ -20,8 +21,40 @@ export class TaskService {
     @InjectModel(Task.name)
     private readonly taskModel: Model<TaskDocument>,
   ) {}
+
+  private calculatePeriodDates(frequency: TaskFrequency, startDate: string) {
+    // Parse the date in DD-MM-YYYY format
+    const [day, month, year] = startDate.split('-').map(num => parseInt(num));
+    const start = new Date(year, month - 1, day); // month is 0-based in Date constructor
+
+    if (isNaN(start.getTime())) {
+      throw new BadRequestException('Invalid start date format. Use DD-MM-YYYY');
+    }
+
+    let end: Date;
+
+    switch (frequency) {
+      case TaskFrequency.DAILY:
+        end = addDays(start, 1);
+        break;
+      case TaskFrequency.WEEKLY:
+        end = addWeeks(start, 1);
+        break;
+      case TaskFrequency.MONTHLY:
+        end = addMonths(start, 1);
+        break;
+      default:
+        end = addDays(start, 1);
+    }
+
+    return {
+      period_start_date: format(start, 'dd-MM-yyyy'),
+      period_end_date: format(end, 'dd-MM-yyyy'),
+    };
+  }
+
   async create(createTaskDto: CreateTaskDto): Promise<IApiResponse<Task>> {
-    const { task_type, target, duration } = createTaskDto;
+    const { task_type, target, duration, task_frequency, start_date } = createTaskDto;
 
     if (task_type === TaskType.YES_NO && !target) {
       throw new BadRequestException('target is required');
@@ -31,9 +64,68 @@ export class TaskService {
       throw new BadRequestException('duration is required');
     }
 
-    const task = new this.taskModel(createTaskDto);
+    // Calculate period dates based on frequency
+    const periodDates = this.calculatePeriodDates(task_frequency, start_date);
+
+    const task = new this.taskModel({
+      ...createTaskDto,
+      is_template: true,
+      is_completed: false,
+      completed_count: 0,
+      ...periodDates,
+    });
+
     const result = await task.save();
     return ApiResponseHelper.success(result, SUCCESS.RECORD_ADDED('task'));
+  }
+
+  async createTaskInstance(parentTask: TaskDocument): Promise<TaskDocument> {
+    const periodDates = this.calculatePeriodDates(
+      parentTask.task_frequency,
+      parentTask.period_end_date,
+    );
+  
+    const taskData = parentTask.toObject();
+    delete taskData._id; 
+  
+    const taskInstance = new this.taskModel({
+      ...taskData,
+      parent_task_id: parentTask._id,
+      is_template: false,
+      is_completed: false,
+      completed_count: 0,
+      ...periodDates,
+    });
+  
+    return taskInstance.save();
+  }
+
+  async updateTaskCompletion(taskId: string, completedTarget: number): Promise<IApiResponse<Task>> {
+    const task = await this.taskModel.findById(taskId);
+    if (!task) {
+      throw new BadRequestException(ERROR.RECORD_NOT_FOUND('task'));
+    }
+
+    // Update completion count
+    task.completed_count += completedTarget;
+
+    // Check if task is completed based on its type
+    let isCompleted = false;
+    if (task.task_type === TaskType.YES_NO) {
+      isCompleted = task.completed_count >= task.target;
+    } else if (task.task_type === TaskType.TIME_BASED) {
+      isCompleted = task.completed_count >= task.duration;
+    }
+
+    task.is_completed = isCompleted;
+
+    // If task is completed and it's a recurring task, create new instance
+    if (isCompleted && task.is_template) {
+      await this.createTaskInstance(task);
+    }
+
+    const updatedTask = await task.save();
+    return ApiResponseHelper.success(updatedTask, SUCCESS.RECORD_UPDATED('task'));
   }
 
   async findAll(query: IFindAllQuery): Promise<IPaginatedResponse<Task[]>> {

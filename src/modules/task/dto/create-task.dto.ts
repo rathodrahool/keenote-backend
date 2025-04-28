@@ -6,6 +6,7 @@ import {
   IsOptional,
   IsString,
   Matches,
+  IsBoolean,
 } from 'class-validator';
 import { Status, TaskFrequency, TaskType } from 'src/shared/constants/enum';
 
@@ -48,4 +49,35 @@ export class CreateTaskDto {
   @IsEnum(Status)
   @IsOptional()
   status?: Status;
+
+  // New fields
+  @IsString()
+  @IsOptional()
+  parent_task_id?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  is_template?: boolean;
+
+  @IsString()
+  @Matches(/^\d{2}-\d{2}-\d{4}$/, {
+    message: 'period_start_date must be in format dd-MM-yyyy',
+  })
+  @IsOptional()
+  period_start_date?: string;
+
+  @IsString()
+  @Matches(/^\d{2}-\d{2}-\d{4}$/, {
+    message: 'period_end_date must be in format dd-MM-yyyy',
+  })
+  @IsOptional()
+  period_end_date?: string;
+
+  @IsNumber()
+  @IsOptional()
+  completed_count?: number;
+
+  @IsBoolean()
+  @IsOptional()
+  is_completed?: boolean;
 }

@@ -23,10 +23,6 @@ export class TimeSessionController {
     return this.timeSessionService.create(createTimeSessionDto);
   }
 
-  @Post('time-based')
-  addTimeBasedSession(@Body() addTimeBasedSessionDto:AddTimeBasedSessionDto) {
-    return this.timeSessionService.addTimeBasedSession(addTimeBasedSessionDto);
-  }
 
   @Get()
   findAll(@Query() query: IFindAllQuery) {

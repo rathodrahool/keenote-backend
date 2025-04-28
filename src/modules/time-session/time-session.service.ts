@@ -1,3 +1,4 @@
+// time-session.service.ts
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateTimeSessionDto } from './dto/create-time-session.dto';
 import { UpdateTimeSessionDto } from './dto/update-time-session.dto';
@@ -8,54 +9,89 @@ import { ApiResponseHelper } from 'src/shared/response/api-response.helper';
 import { ERROR, SUCCESS } from 'src/shared/constants/constant';
 import { IApiResponse, IFindAllQuery, IPaginatedResponse } from 'src/shared/types/response.type';
 import { paginate } from 'src/util/paginate';
-import { AddTimeBasedSessionDto } from './dto/add-time-based-session.dto';
-import { TaskType } from 'src/shared/constants/enum';
+import { TaskType, SessionStatus } from 'src/shared/constants/enum';
+import { Inject } from '@nestjs/common';
+import { TaskService } from '../task/task.service';
+import { Task } from '../task/entities/task.entity';
 
 @Injectable()
 export class TimeSessionService {
   constructor(
     @InjectModel(TimeSession.name)
     private readonly timeSessionModel: Model<TimeSessionDocument>,
+    private readonly taskService: TaskService,
   ) {}
 
+  private calculateRemainingDuration(taskDuration: number, sessionDuration: number): number {
+    return Math.max(0, taskDuration - sessionDuration);
+  }
+
+  private async checkPeriodCompletion(
+    taskId: string,
+    date: string,
+    completedTarget: number,
+  ): Promise<boolean> {
+    const sessions = await this.timeSessionModel.find({
+      task: taskId,
+      date: { $lte: date },
+    });
+
+    const totalCompleted = sessions.reduce((sum, session) => sum + (session.completed_target || 0), 0);
+    return totalCompleted >= completedTarget;
+  }
+
   async create(createTimeSessionDto: CreateTimeSessionDto): Promise<IApiResponse<TimeSession>> {
-    const timeSession = new this.timeSessionModel(createTimeSessionDto);
+    const { task, date, completed_target, duration_minutes } = createTimeSessionDto;
+
+    // Get the task to check its requirements
+    const taskResponse = await this.taskService.findOne(task.toString());
+    const taskData = taskResponse.data as Task; // Cast to Task type
+
+    if (!taskData) {
+      throw new BadRequestException(ERROR.RECORD_NOT_FOUND('task'));
+    }
+
+    // Calculate remaining duration for time-based tasks
+    if (taskData.task_type === TaskType.TIME_BASED) {
+      createTimeSessionDto.remaining_duration = this.calculateRemainingDuration(
+        taskData.duration,
+        duration_minutes || 0,
+      );
+    }
+
+    // Check if this session completes the period
+    const isPeriodCompleted = await this.checkPeriodCompletion(
+      task.toString(),
+      date,
+      taskData.target || taskData.duration,
+    );
+
+    const timeSession = new this.timeSessionModel({
+      ...createTimeSessionDto,
+      is_period_completed: isPeriodCompleted,
+      period_id: `${task}_${date}`, // Create a unique period ID
+    });
+
     const result = await timeSession.save();
+
+    // Update task completion status if period is completed
+    if (isPeriodCompleted) {
+      await this.taskService.updateTaskCompletion(
+        task.toString(),
+        completed_target || duration_minutes || 0,
+      );
+    }
+
     return ApiResponseHelper.created(result, SUCCESS.RECORD_ADDED('time session'));
   }
 
-  async addTimeBasedSession(addTimeBasedSessionDto:AddTimeBasedSessionDto) : Promise<IApiResponse<[]>>{
-    const {task, date,ended_at ,status} = addTimeBasedSessionDto;
-    const timeSession = await this.timeSessionModel.findOne({
-      task : task,
-      date: date
-    })
-    if(!timeSession){
-      const newTimeSession = new this.timeSessionModel(addTimeBasedSessionDto);
-     await newTimeSession.save()
-     return ApiResponseHelper.created([], SUCCESS.RECORD_ADDED('time session'));
-    }
-
-    await this.timeSessionModel.updateOne({
-      _id : timeSession.id
-    },
-    {
-      session_type : TaskType.TIME_BASED,
-      ended_at : ended_at,
-      duration_minutes : Math.floor((ended_at - timeSession.started_at) / 60000),
-      status : status
-
-    })
-
-  }
   async findAll(query: IFindAllQuery): Promise<IPaginatedResponse<TimeSession[]>> {
-    const timeSessions = await paginate<TimeSession>(this.timeSessionModel, query, [
-      'task',
-      'started_at',
-      'ended_at',
-      'duration_minutes',
-      'completed_target',
-    ],['task']);
+    const timeSessions = await paginate<TimeSession>(
+      this.timeSessionModel,
+      query,
+      ['task', 'date', 'status', 'session_type'],
+      ['task'],
+    );
 
     return ApiResponseHelper.paginate(
       timeSessions.results,
@@ -67,7 +103,7 @@ export class TimeSessionService {
   }
 
   async findOne(id: string): Promise<IApiResponse<TimeSession>> {
-    const timeSession = await this.timeSessionModel.findById(id);
+    const timeSession = await this.timeSessionModel.findById(id).populate('task');
     if (!timeSession) {
       throw new BadRequestException(ERROR.RECORD_NOT_FOUND('time session'));
     }
@@ -82,19 +118,36 @@ export class TimeSessionService {
     id: string,
     updateTimeSessionDto: UpdateTimeSessionDto,
   ): Promise<IApiResponse<[]>> {
-    const timeSession = await this.timeSessionModel.findByIdAndUpdate(
-      id,
-      updateTimeSessionDto,
-      {
-        new: true,
-      },
-    );
+    const timeSession = await this.timeSessionModel.findById(id);
+    if (!timeSession) {
+      throw new BadRequestException(ERROR.RECORD_NOT_FOUND('time session'));
+    }
+
+    // If updating completion status, check period completion
+    if (updateTimeSessionDto.completed_target || updateTimeSessionDto.duration_minutes) {
+      const isPeriodCompleted = await this.checkPeriodCompletion(
+        timeSession.task.toString(),
+        timeSession.date,
+        updateTimeSessionDto.completed_target || timeSession.completed_target || 0,
+      );
+
+      updateTimeSessionDto.is_period_completed = isPeriodCompleted;
+
+      if (isPeriodCompleted) {
+        await this.taskService.updateTaskCompletion(
+          timeSession.task.toString(),
+          updateTimeSessionDto.completed_target || timeSession.completed_target || 0,
+        );
+      }
+    }
+
+    await this.timeSessionModel.findByIdAndUpdate(id, updateTimeSessionDto, {
+      new: true,
+    });
 
     return ApiResponseHelper.success(
       [],
-      timeSession
-        ? SUCCESS.RECORD_UPDATED('time session')
-        : SUCCESS.RECORD_NOT_FOUND('time session'),
+      SUCCESS.RECORD_UPDATED('time session'),
     );
   }
 

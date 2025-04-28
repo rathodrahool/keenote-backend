@@ -1,4 +1,5 @@
-import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, Matches } from 'class-validator';
+// create-time-session.dto.ts
+import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, Matches, IsBoolean } from 'class-validator';
 import { Schema as MongooseSchema } from 'mongoose';
 import { SessionStatus, TaskType } from 'src/shared/constants/enum';
 
@@ -30,9 +31,22 @@ export class CreateTimeSessionDto {
 
   @IsEnum(TaskType)
   @IsOptional()
-  session_type?:TaskType
+  session_type?: TaskType;
 
   @IsEnum(SessionStatus)
   @IsOptional()
-  status?:SessionStatus
+  status?: SessionStatus;
+
+  // New fields
+  @IsBoolean()
+  @IsOptional()
+  is_period_completed?: boolean;
+
+  @IsString()
+  @IsOptional()
+  period_id?: string;
+
+  @IsNumber()
+  @IsOptional()
+  remaining_duration?: number;
 }

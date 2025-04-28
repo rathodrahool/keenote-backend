@@ -23,7 +23,7 @@ export class TimeSession {
   ended_at: number;
 
   @Prop({ type: String, required: true })
-  date: number;
+  date: string;
 
   @Prop({ type: Number, required: false })
   duration_minutes: number;

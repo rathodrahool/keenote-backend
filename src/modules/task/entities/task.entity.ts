@@ -66,4 +66,7 @@ export class Task {
 export const TaskSchema = SchemaFactory.createForClass(Task);
 TaskSchema.plugin(SoftDeleteDefaultFieldsPlugin);
 
-export type TaskDocument = Task & Document & ISoftDelete; 
+export type TaskDocument = Task & Document & ISoftDelete & {
+  _id: MongooseSchema.Types.ObjectId;
+  toObject(): any;
+};
