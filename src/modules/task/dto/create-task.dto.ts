@@ -38,10 +38,11 @@ export class CreateTaskDto {
   start_date: string;
 
   @IsString()
+  @IsOptional()
   @Matches(/^\d{2}-\d{2}-\d{4}$/, {
     message: 'end_date must be in format dd-MM-yyyy',
   })
-  end_date: string;
+  end_date?: string;
 
   @IsMongoId()
   category: string;

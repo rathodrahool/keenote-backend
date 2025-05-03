@@ -10,7 +10,6 @@ import { ERROR, SUCCESS } from 'src/shared/constants/constant';
 import { IApiResponse, IFindAllQuery, IPaginatedResponse } from 'src/shared/types/response.type';
 import { paginate } from 'src/util/paginate';
 import { TaskType, SessionStatus } from 'src/shared/constants/enum';
-import { Inject } from '@nestjs/common';
 import { TaskService } from '../task/task.service';
 import { Task } from '../task/entities/task.entity';
 
