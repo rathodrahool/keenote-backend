@@ -16,9 +16,10 @@ async function bootstrap() {
       contentSecurityPolicy: false,
     }),
   );
-  app.enableCors();
-  app.enableCors();
-  app.enable('trust proxy', true);
+  app.enableCors({
+    origin: true, // Reflects the request origin
+    credentials: true,
+  });
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();

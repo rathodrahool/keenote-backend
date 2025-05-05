@@ -141,7 +141,7 @@ export class TaskService {
       tasks.total,
       tasks.page,
       query.limit,
-      SUCCESS.RECORD_FETCHED('category'),
+      SUCCESS.RECORD_FETCHED('tasks'),
     );
   }
 
