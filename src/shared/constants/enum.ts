@@ -1,9 +1,3 @@
-export enum EmailTemplateStatus {
-  DRAFT = 'DRAFT',
-  PUBLISHED = 'PUBLISHED',
-  ARCHIVED = 'ARCHIVED',
-}
-
 export enum Status {
   ACTIVE = 'ACTIVE',
   INACTIVE = 'INACTIVE',
@@ -17,4 +11,11 @@ export enum TaskFrequency {
   DAILY = 'DAILY',
   WEEKLY = 'WEEKLY',
   MONTHLY = 'MONTHLY',
+}
+
+export enum SessionStatus {
+  IN_PROGRESS = 'IN_PROGRESS',
+  COMPLETED = 'COMPLETED',
+  ABANDONED = 'ABANDONED',
+  PAUSED = 'PAUSED'
 }

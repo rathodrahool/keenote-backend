@@ -41,4 +41,13 @@ export class TaskController {
   remove(@Param('id') id: string) {
     return this.taskService.remove(id);
   }
+
+  @Patch(':id/complete')
+  updateTaskCompletion(
+    @Param('id') id: string,
+    @Body('completedTarget') completedTarget: number,
+  ) {
+    return this.taskService.updateTaskCompletion(id, completedTarget);
+  }
+
 }

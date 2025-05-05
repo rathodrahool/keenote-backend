@@ -43,7 +43,30 @@ export class Task {
 
   @Prop({ type: String, enum: Status, default: Status.ACTIVE })
   status: Status;
+
+  @Prop({ type: String, required: false })
+  parent_task_id: string;
+
+  @Prop({ type: Boolean, default: false })
+  is_template: boolean;
+
+  @Prop({ type: String, required: false })
+  period_start_date: string;
+
+  @Prop({ type: String, required: false })
+  period_end_date: string;
+
+  @Prop({ type: Number, default: 0 })
+  completed_count: number;
+
+  @Prop({ type: Boolean, default: false })
+  is_completed: boolean;
 }
+
 export const TaskSchema = SchemaFactory.createForClass(Task);
 TaskSchema.plugin(SoftDeleteDefaultFieldsPlugin);
-export type TaskDocument = Task & Document & ISoftDelete;
+
+export type TaskDocument = Task & Document & ISoftDelete & {
+  _id: MongooseSchema.Types.ObjectId;
+  toObject(): any;
+};

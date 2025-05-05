@@ -13,25 +13,29 @@ export async function paginate<T>(
   const skip = (page - 1) * limit;
   const sort = { [sortBy]: sortOrder === 'asc' ? 1 : -1 };
 
+  const baseFilter = { deleted: { $ne: true } };
+
   const searchFilter = search
     ? {
-        $or: searchFields.map((field) => ({
-          [field]: { $regex: search, $options: 'i' },
-        })),
+        $and: [
+          baseFilter,
+          {
+            $or: searchFields.map((field) => ({
+              [field]: { $regex: search, $options: 'i' },
+            })),
+          },
+        ],
       }
-    : {};
+    : baseFilter;
 
   let findQuery = model.find(searchFilter).sort(sort).skip(skip).limit(+limit);
 
-  // Handle populate if provided
   if (populate) {
-    // If populate is an array, populate multiple fields
     if (Array.isArray(populate)) {
       populate.forEach((field) => {
         findQuery = findQuery.populate(field);
       });
     } else {
-      // If populate is a string, populate single field
       findQuery = findQuery.populate(populate);
     }
   }
